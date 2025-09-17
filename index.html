@@ -1,0 +1,120 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Office Heads Up Form</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    .day { margin-bottom: 10px; padding: 5px; border-radius: 5px; }
+    .global-living { background-color: #e0f0ff; }
+    .burjen-focus { background-color: #cfdcc7; }
+    .soft-pink { background-color: #fce4ec; }
+    .disabled { color: gray; }
+    input[type="email"], textarea { width: 100%; margin-bottom: 10px; }
+  </style>
+</head>
+<body>
+  <h2>Office Heads Up Form</h2>
+  <p>Please fill out this form every week. Confirming your attendance in the office will avoid overcrowding.</p>
+  <form id="attendanceForm">
+    <label>Email Address:</label><br>
+    <input type="email" id="email" required><br>
+
+    <div id="daysContainer"></div>
+
+    <label>Additional Notes:</label><br>
+    <textarea id="notes" rows="4" placeholder="Any comments or context..."></textarea><br>
+
+    <button type="submit">Submit</button>
+  </form>
+
+  <script>
+    const maxSlots = 5;
+    const slots = {
+      Monday: maxSlots,
+      Tuesday: maxSlots,
+      Wednesday: maxSlots,
+      Thursday: maxSlots,
+      Friday: maxSlots
+    };
+
+    const daysContainer = document.getElementById('daysContainer');
+
+    function renderForm() {
+      daysContainer.innerHTML = '';
+      for (const day in slots) {
+        let label = day;
+        let className = "day";
+
+        if (day === "Tuesday" || day === "Wednesday") {
+          label += " (Global Living Focus)";
+          className += " global-living";
+        } else if (day === "Thursday") {
+          label += " (Burjen Focus)";
+          className += " burjen-focus";
+        } else if (day === "Monday" || day === "Friday") {
+          className += " soft-pink";
+        }
+
+        const disabled = slots[day] === 0 ? 'disabled' : '';
+        const labelClass = slots[day] === 0 ? 'disabled' : '';
+
+        daysContainer.innerHTML += `
+          <div class="${className}">
+            <label class="${labelClass}">
+              <input type="checkbox" name="days" value="${day}" ${disabled}>
+              ${label} (${slots[day]} slots left)
+            </label>
+          </div>
+        `;
+      }
+    }
+
+    document.getElementById('attendanceForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const email = document.getElementById('email').value;
+      const notes = document.getElementById('notes').value;
+      const selectedDays = Array.from(document.querySelectorAll('input[name="days"]:checked')).map(el => el.value);
+
+      const dayMapping = {
+        Monday: "",
+        Tuesday: "",
+        Wednesday: "",
+        Thursday: "",
+        Friday: ""
+      };
+
+      selectedDays.forEach(day => {
+        if (slots[day] > 0) {
+          slots[day]--;
+          dayMapping[day] = email;
+        }
+      });
+
+      fetch("https://script.google.com/macros/s/AKfycbyYrb5SKBroW3yUVpipRiGrZB9oOfwufJJM_1p4cycxL8sj2LSnuRqEAKuMeep5L5imIA/exec", {
+        method: "POST",
+        body: JSON.stringify({
+          email: email,
+          notes: notes,
+          ...dayMapping
+        }),
+        headers: {
+          "Content-Type": "application/json"
+        }
+      })
+      .then(response => response.text())
+      .then(data => {
+        alert("Your response has been recorded.");
+        renderForm();
+      })
+      .catch(error => {
+        console.error("Error:", error);
+        alert("There was a problem submitting your response.");
+      });
+    });
+
+    renderForm();
+  </script>
+</body>
+</html>
